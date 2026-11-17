@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chinese Coin Clicker - PRO Edition</title>
+    <style>
+        :root {
+            var(--bg-dark): #4a0008;
+            var(--bg-light): #8a1523;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0; padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: radial-gradient(circle at center, #8a1523 0%, #4a0008 100%);
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* ЗОЛОТЫЕ БЛЕСТКИ НА ФОНЕ */
+        .sparkle {
+            position: absolute;
+            background: radial-gradient(circle, #fff, #ffd700);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0;
+            animation: floatSparkle linear forwards;
+        }
+        @keyframes floatSparkle {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            20% { opacity: 0.8; scale: 1; }
+            100% { transform: translateY(-10vh) scale(0.5); opacity: 0; }
+        }
+
+        .app-container {
+            display: flex; flex-direction: column; justify-content: space-between;
+            align-items: center; height: 100%; padding: 40px 20px; z-index: 10;
+        }
+
+        /* СЧЕТЧИК И ТИТУЛ */
+        .score-container { text-align: center; margin-top: 20px; position: relative; z-index: 10; }
+        
+        .title-text {
+            color: #fbbf24;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            transition: color 0.3s;
+        }
+
+        .score-value {
+            font-size: 5rem; font-weight: 900;
+            background: linear-gradient(to bottom, #fff2a8, #ffd700, #b8860b);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+            letter-spacing: 2px; transition: all 0.3s ease;
+        }
+
+        .combo-text {
+            position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+            color: #ff4500; font-weight: bold; font-size: 1.2rem;
+            text-shadow: 0 0 10px #ff0000; opacity: 0; transition: opacity 0.2s; white-space: nowrap;
+        }
+        .combo-text.active { opacity: 1; animation: pulseCombo 0.5s infinite alternate; }
+        @keyframes pulseCombo { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.1); } }
+
+        /* МОНЕТА (ОДИН ЦВЕТ, МЕНЯЕТСЯ ТОЛЬКО ОБВОДКА И СВЕЧЕНИЕ) */
+        .coin-wrapper { flex-grow: 1; display: flex; justify-content: center; align-items: center; position: relative; width: 100%; z-index: 10; }
+        
+        .coin {
+            width: 280px; height: 280px; border-radius: 50%; position: relative;
+            display: flex; justify-content: center; align-items: center; cursor: pointer;
+            background: linear-gradient(135deg, #ffd700, #b8860b); /* Базовый цвет навсегда */
+            border: 8px solid #8b6508;
+            box-shadow: inset 0 0 15px #fff2a8, 0 15px 35px rgba(0, 0, 0, 0.7);
+            transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.5s, border-color 0.5s;
+        }
+
+        /* УРОВНИ СВЕЧЕНИЯ */
+        .glow-level-1 { border-color: #8b6508; box-shadow: inset 0 0 15px #fff2a8, 0 15px 35px rgba(0,0,0,0.7), 0 0 20px rgba(255, 215, 0, 0.3); }
+        .glow-level-2 { border-color: #38bdf8; box-shadow: inset 0 0 15px #fff2a8, 0 15px 35px rgba(0,0,0,0.7), 0 0 50px rgba(56, 189, 248, 0.8); }
+        .glow-level-3 { border-color: #f97316; box-shadow: inset 0 0 15px #fff2a8, 0 15px 35px rgba(0,0,0,0.7), 0 0 70px rgba(249, 115, 22, 0.9); }
+        .glow-level-4 { border-color: #a855f7; box-shadow: inset 0 0 15px #fff2a8, 0 15px 35px rgba(0,0,0,0.7), 0 0 100px rgba(168, 85, 247, 1); }
+
+        .coin.on-fire { animation: fireGlow 0.4s infinite alternate; }
+        @keyframes fireGlow { 0% { filter: drop-shadow(0 0 20px #ef4444); } 100% { filter: drop-shadow(0 0 50px #f97316); } }
+
+        .coin-hole {
+            width: 70px; height: 70px; background: #4a0008;
+            box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.8); position: relative; z-index: 2;
+            border: 6px solid #8b6508; transition: border-color 0.5s;
+        }
+
+        .char {
+            position: absolute; font-size: 2.5rem; font-weight: bold;
+            color: #8b6508; text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.4);
+        }
+        .char-top { top: 20px; } .char-bottom { bottom: 20px; } .char-left { left: 25px; } .char-right { right: 25px; }
+
+        /* КНОПКИ */
+        .buttons-container { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 320px; z-index: 20; }
+        
+        .btn {
+            border: none; border-radius: 20px; padding: 18px 20px; font-size: 1.1rem; font-weight: bold;
+            text-transform: uppercase; cursor: pointer; transition: transform 0.1s, filter 0.1s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), inset 0 2px 5px rgba(255, 255, 255, 0.4);
+            text-align: center;
+        }
+        .btn:active { transform: translateY(3px) scale(0.98); filter: brightness(0.9); }
+        
+        .claim-btn { background: linear-gradient(to right, #b8860b, #ffd700, #b8860b); color: #332000; }
+        .sub-btn { background: linear-gradient(to right, #0284c7, #38bdf8, #0284c7); color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+        /* ВЫЛЕТАЮЩИЕ ТЕКСТЫ И ЧАСТИЦЫ */
+        .floating-text {
+            position: fixed; font-size: 3rem; font-weight: 900; color: #fff2a8;
+            text-shadow: 0 3px 6px rgba(0,0,0,1); pointer-events: none; z-index: 9999;
+            animation: floatUpAndFade 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        .combo-plus { color: #ff6b6b; font-size: 4rem; text-shadow: 0 0 15px #ff0000; }
+        @keyframes floatUpAndFade { 0% { opacity: 1; transform: translateY(0) scale(0.8); } 100% { opacity: 0; transform: translateY(-180px) scale(1.3); } }
+
+        /* ЧАСТИЦЫ ФЕЙЕРВЕРКА */
+        .firework-particle {
+            position: fixed; border-radius: 50%; pointer-events: none; z-index: 9998;
+            animation: explode 1s ease-out forwards;
+        }
+        @keyframes explode {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Счетчик -->
+        <div class="score-container">
+            <div class="combo-text" id="combo-text">🔥 КОМБО x2 🔥</div>
+            <div class="title-text" id="title-label">Бедный крестьянин 🌾</div>
+            <div class="score-value" id="score">0</div>
+        </div>
+
+        <!-- Центральная монета -->
+        <div class="coin-wrapper" id="coin-area">
+            <div class="coin glow-level-1" id="coin">
+                <div class="char char-top">招</div>
+                <div class="char char-bottom">寶</div>
+                <div class="char char-left">財</div>
+                <div class="char char-right">進</div>
+                <div class="coin-hole" id="coin-hole"></div>
+            </div>
+        </div>
+
+        <div class="buttons-container">
+            <button class="btn sub-btn" id="sub-btn">Подписаться (+5000 🪙)</button>
+            <button class="btn claim-btn" id="claim-btn">Забрать монеты</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0; 
+        let currentRank = 0;
+        let lastClickTime = 0;
+        let fastClicksCount = 0; 
+        let comboTimeout;
+
+        const scoreElement = document.getElementById('score');
+        const titleElement = document.getElementById('title-label');
+        const coinElement = document.getElementById('coin');
+        const coinHole = document.getElementById('coin-hole');
+        const comboText = document.getElementById('combo-text');
+        const subBtn = document.getElementById('sub-btn');
+        const claimBtn = document.getElementById('claim-btn');
+
+        // ЗВУКОВОЙ ДВИЖОК (Web Audio API)
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playCoinSound(isCombo = false) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(isCombo ? 1500 : 1200, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(2500, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(isCombo ? 0.2 : 0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playLevelUpSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.2);
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.6);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.6);
+        }
+
+        // РАНГИ, СВЕЧЕНИЕ И ФЕЙЕРВЕРКИ
+        const ranks = [
+            { threshold: 0, title: "Бедный крестьянин 🌾", glow: "glow-level-1", color: "#fbbf24" },
+            { threshold: 500, title: "Успешный торговец 💰", glow: "glow-level-2", color: "#38bdf8" },
+            { threshold: 1000, title: "Министр двора 📜", glow: "glow-level-3", color: "#f97316" },
+            { threshold: 5000, title: "ИМПЕРАТОР 🐉", glow: "glow-level-4", color: "#a855f7" }
+        ];
+
+        function shootFireworks(x, y) {
+            const colors = ['#ffd700', '#ff4500', '#00ffff', '#ff00ff', '#ffffff'];
+            for (let i = 0; i < 40; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('firework-particle');
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.width = Math.random() * 8 + 4 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 150 + 50;
+                particle.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
+                particle.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
+                
+                document.body.appendChild(particle);
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        function checkProgress() {
+            let newRank = 0;
+            for (let i = ranks.length - 1; i >= 0; i--) {
+                if (score >= ranks[i].threshold) { newRank = i; break; }
+            }
+
+            if (newRank !== currentRank) {
+                currentRank = newRank;
+                titleElement.textContent = ranks[currentRank].title;
+                titleElement.style.color = ranks[currentRank].color;
+                
+                // Меняем класс свечения у монеты
+                coinElement.className = XXXINLINECODEXXX1XXXINLINECODEXXX;
+                
+                // Меняем цвет отверстия под ауру
+                coinHole.style.borderColor = ranks[currentRank].color;
+
+                // Фейерверк и звук, если это повышение (а не сброс)
+                if (score > 0) {
+                    const rect = coinElement.getBoundingClientRect();
+                    shootFireworks(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                    playLevelUpSound();
+                }
+            }
+        }
+
+        // БЛЕСТКИ НА ФОНЕ
+        function spawnSparkle() {
+            const sparkle = document.createElement('div');
+            sparkle.classList.add('sparkle');
+            const size = Math.random() * 4 + 2;
+            sparkle.style.width = size + 'px';
+            sparkle.style.height = size + 'px';
+            sparkle.style.left = Math.random() * 100 + 'vw';
+            sparkle.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            document.body.appendChild(sparkle);
+            setTimeout(() => sparkle.remove(), 5000);
+        }
+        setInterval(spawnSparkle, 300);
+
+        function showFloatingText(amount, x, y, customClass = '') {
+            const plusText = document.createElement('div');
+            plusText.classList.add('floating-text');
+            if (customClass) plusText.classList.add(customClass);
+            plusText.textContent = XXXINLINECODEXXX2XXXINLINECODEXXX;
+            plusText.style.left = XXXINLINECODEXXX3XXXINLINECODEXXX; 
+            plusText.style.top = XXXINLINECODEXXX4XXXINLINECODEXXX;
+            document.body.appendChild(plusText);
+            setTimeout(() => plusText.remove(), 800);
+        }
+
+        // КЛИК ПО МОНЕТЕ
+        coinElement.addEventListener('pointerdown', (e) => {
+            initAudio(); // Инициализация звука по первому клику
+            coinElement.style.transform = 'scale(0.92)';
+            setTimeout(() => coinElement.style.transform = 'scale(1)', 100);
+
+            const currentTime = Date.now();
+            let clickValue = 1; 
+            let isCombo = false;
+
+            if (currentTime - lastClickTime < 300) fastClicksCount++; else fastClicksCount = 0;
+            lastClickTime = currentTime;
+
+            let textClass = '';
+            if (fastClicksCount > 15) {
+                clickValue = 5; textClass = 'combo-plus'; isCombo = true;
+                coinElement.classList.add('on-fire');
+                comboText.textContent = "🔥🔥 КОМБО x5 🔥🔥"; comboText.classList.add('active');
+            } else if (fastClicksCount > 5) {
+                clickValue = 2; isCombo = true;
+                coinElement.classList.add('on-fire');
+                comboText.textContent = "🔥 КОМБО x2 🔥"; comboText.classList.add('active');
+            } else {
+                coinElement.classList.remove('on-fire'); comboText.classList.remove('active');
+            }
+
+            clearTimeout(comboTimeout);
+            comboTimeout = setTimeout(() => {
+                fastClicksCount = 0; coinElement.classList.remove('on-fire'); comboText.classList.remove('active');
+            }, 500);
+
+            score += clickValue;
+            scoreElement.textContent = score;
+            checkProgress(); 
+            playCoinSound(isCombo);
+
+            let x = (e.clientX) ? e.clientX : coinElement.getBoundingClientRect().left + 140;
+            let y = (e.clientY) ? e.clientY : coinElement.getBoundingClientRect().top + 140;
+            showFloatingText(clickValue, x, y, textClass);
+        });
+
+        // КНОПКА ПОДПИСКИ
+        let subClaimed = false;
+        subBtn.addEventListener('click', () => {
+            if (subClaimed) return alert("Ты уже забрал бонус за подписку! 🦊");
+            
+            // Здесь будет логика открытия канала (например через Telegram Web App API)
+            // window.open('https://t.me/ТВОЙ_КАНАЛ', '_blank');
+            
+            score += 5000;
+            scoreElement.textContent = score;
+            subClaimed = true;
+            subBtn.style.background = "gray";
+            subBtn.textContent = "Подписка оформлена ✔️";
+            checkProgress();
+            
+            const rect = coinElement.getBoundingClientRect();
+            shootFireworks(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            playLevelUpSound();
+        });
+
+        // Кнопка забрать
+        claimBtn.addEventListener('click', () => {
+            if (score === 0) return alert("Тапай давай! 💅");
+            if (confirm(XXXINLINECODEXXX5XXXINLINECODEXXX)) {
+                score = 0; scoreElement.textContent = score; checkProgress();
+                fastClicksCount = 0; coinElement.classList.remove('on-fire'); comboText.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
